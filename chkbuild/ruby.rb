@@ -612,7 +612,8 @@ def (ChkBuild::Ruby).build_proc(b)
   make_docs.call if make_docs
   do_rdoc &&= b.catch_error { b.make("install-doc", make_options) }
 
-  b.catch_error { b.run("./ruby", '-e', ChkBuild::Ruby::VERSION_LIST_SCRIPT, :section=>"version-list") }
+  require 'rbconfig'
+  b.catch_error { b.run("./ruby", "-I.",  "-Ilib", "-I.ext/#{RbConfig::CONFIG['sitearch']}", '-e', ChkBuild::Ruby::VERSION_LIST_SCRIPT, :section=>"version-list") }
 
   if validate_dependencies
     b.catch_error {
@@ -639,6 +640,17 @@ def (ChkBuild::Ruby).build_proc(b)
   end
 
   if do_test
+    require 'find'
+
+    File.open('rebase.lst', 'w') do |file|
+      Find.find('.') { |f|
+        if f.end_with?('.dll') || f.end_with?('.so')
+          file.write("#{f}\n")
+        end
+      }
+    end
+    b.run("rebase", "-n", "-s", "-T", "./rebase.lst")
+
     if File.file? "#{srcdir}/KNOWNBUGS.rb"
       b.catch_error { b.make("test-knownbug", "OPTS=-v -q", make_options) }
     end

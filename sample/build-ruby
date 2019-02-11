@@ -55,8 +55,8 @@ require 'chkbuild'
 
 ChkBuild::Ruby.def_target(
   [
-    { :suffix_? => 'master', :output_interval_timeout => '10min' },
-    *ChkBuild::Ruby.maintained_release_branches
+    { :suffix_? => 'master', :output_interval_timeout => '15min' },
+#     *ChkBuild::Ruby.maintained_release_branches
   ],
 
 #   [ # :abi_check needs --enable-shared
@@ -91,7 +91,7 @@ ChkBuild::Ruby.def_target(
   # :validate_dependencies => false,
   # :validate_dependencies => true,     # needs gmake and gcc 4.5 or later.
   #
-  # :do_test => true,
+  :do_test => false,
 
   # :old => 1,
 
