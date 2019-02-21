@@ -1,0 +1,36 @@
+version: 2
+
+jobs:
+  appveyor:
+    docker:
+      - image: ruby:2.6
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+      - run:
+          name: Install dependencies
+          command: |
+            bundle install --jobs=4 --retry=3 --path vendor/bundle
+      - save_cache:
+          paths:
+            - ./vendor/bundle
+          key: v1-dependencies-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+      - run:
+          name: Execute vayor
+          command: |
+            bundle exec veyor start `basename ${CIRCLE_REPOSITORY_URL} | sed -e 's/.git$//g'` --branch=${CIRCLE_BRANCH}
+
+workflows:
+  version: 2
+  daily:
+    triggers:
+      - schedule:
+          cron: "0 21 * * *" # JST 06:00
+          filters:
+            branches:
+              only:
+                - feature/appveyor-cygwin # ここは fork 時に修正が必要
+    jobs:
+      - appveyor

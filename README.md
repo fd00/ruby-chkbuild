@@ -1,3 +1,16 @@
+# chkbuild (for cygwin)
+[![Build status](https://ci.appveyor.com/api/projects/status/wt99wvh9kkcqv030/branch/feature/appveyor-cygwin?svg=true)](https://ci.appveyor.com/project/fd00/ruby-chkbuild/branch/appveyor-cygwin)
+
+Cygwin 向けに修正を加えた chkbuild です。
+
+## 設定
+- AppVeyor に登録します。
+- CircleCI に登録します。
+  - 環境変数 `APPVEYOR_ACCOUNT_NAME` に AppVeyor でのアカウント名を設定します。
+  - 環境変数 `APPVEYOR_API_TOKEN` に AppVeyor API にアクセスするためのトークンを設定します。
+
+**↓以下はオリジナルの README↓**
+
 chkbuild
 ========
 
