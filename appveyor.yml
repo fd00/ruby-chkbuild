@@ -21,5 +21,5 @@ build_script:
     C:\cygwin\bin\bash   -lc "cd $APPVEYOR_BUILD_FOLDER && ./appveyor.sh" )
 - cmd: if [%TARGET%]==[cygwin64] (
     C:\cygwin64\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER && ./appveyor.sh" )
-artifacts:
-- path: tmp
+# artifacts:
+# - path: tmp

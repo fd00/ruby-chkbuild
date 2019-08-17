@@ -639,7 +639,7 @@ def (ChkBuild::Ruby).build_proc(b)
     }
   end
 
-  if do_test
+  if false # do_test
     require 'find'
 
     File.open('rebase.lst', 'w') do |file|
