@@ -106,7 +106,7 @@ End
   DOMAINLABEL = /[A-Za-z0-9-]+/
   DOMAINPAT = /#{DOMAINLABEL}(\.#{DOMAINLABEL})*/
 
-  OldestMaintainedRelease = "2.5"
+  OldestMaintainedRelease = "2.6"
 
   module_function
 
@@ -187,6 +187,7 @@ def (ChkBuild::Ruby::CompleteOptions).call(target_opts)
 
   hs << {
     :autoconf_command => 'autoconf',
+    :autoconf_command_args => [],
     :configure_args => [],
     :configure_args_valgrind => %w[--with-valgrind],
     :configure_args_enable_debug_env => %w[--enable-debug-env],
@@ -301,6 +302,8 @@ def (ChkBuild::Ruby).build_proc(b)
   warnflags = Util.opts2nullablearyparam(bopts, :warnflags)
   dldflags = Util.opts2aryparam(bopts, :dldflags)
   autoconf_command = bopts[:autoconf_command]
+  autoconf_command_args = bopts[:autoconf_command_args]
+  autoreconf_command = bopts[:autoreconf_command]
   make_options = Util.opts2hashparam(bopts, :make_options)
   use_rubyspec = bopts[:use_rubyspec]
   use_rubyspec_in_tree = bopts[:use_rubyspec_in_tree]
@@ -317,6 +320,9 @@ def (ChkBuild::Ruby).build_proc(b)
 
   b.run(autoconf_command, '--version', :section=>'autoconf-version')
   b.run('bison', '--version', :section=>'bison-version')
+  if system('xcodebuild', '-version', out: File::NULL, err: File::NULL)
+    b.run('xcodebuild', '-version', :section=>'xcode-version')
+  end
 
   if validate_dependencies
     cflags ||= []
@@ -415,7 +421,15 @@ def (ChkBuild::Ruby).build_proc(b)
     end
   end
 
-  b.run(autoconf_command)
+  if File.readable?("autogen.sh")
+    commands = ["./autogen.sh"]
+    commands << { "ENV:AUTORECONF" => autoreconf_command } if autoreconf_command
+    b.run(*commands)
+  elsif autoreconf_command
+    b.run(autoreconf_command, "--install")
+  else
+    b.run(autoconf_command, *(autoconf_command_args || []))
+  end
 
   Dir.chdir(ruby_build_dir)
 
@@ -690,7 +704,7 @@ def (ChkBuild::Ruby).build_proc(b)
       b.catch_error {
         FileUtils.rmtree "rubyspec_temp"
         config = Dir.pwd + "/rubyspec/default.mspec"
-        command = %W[bin/ruby mspec/bin/mspec -B #{config} -V -f s -t #{rubybin}]
+        command = %W[bin/ruby mspec/bin/mspec -B #{config} -I./ruby/tool/lib -V -f s -t #{rubybin}]
         command << "rubyspec"
         command << {
           :section=>"rubyspec"
@@ -707,7 +721,7 @@ def (ChkBuild::Ruby).build_proc(b)
             b.catch_error {
               FileUtils.rmtree "rubyspec_temp"
               config = ruby_build_dir + "rubyspec/default.mspec"
-              command = %W[bin/ruby mspec/bin/mspec -B #{config} -V -f s -t #{rubybin}]
+              command = %W[bin/ruby mspec/bin/mspec -B #{config} -I./ruby/tool/lib -V -f s -t #{rubybin}]
               command << f.to_s
               command << {
                 :section=>f.to_s

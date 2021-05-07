@@ -127,6 +127,8 @@ end
 case ChkBuild.nickname
 when 'tk2-243-31075', 'armv8b'
   arg[0].slice!(1,9)
+when 'arch'
+  h[:autoreconf_command] = 'autoreconf'
 when 'archlinux'
   h[:configure_args_cc] = %w[CC=clang]
   ENV['RUBY_FORCE_TEST_JIT'] = '1'
@@ -135,6 +137,7 @@ when 'scw-9d6766'
   h[:timeout] = '3h'
 when 'openbsd-current'
   h[:autoconf_command] = 'autoconf-2.69'
+  h[:autoreconf_command] = 'autoreconf-2.69'
   h[:configure_args_opt] = %w[--with-opt-dir=/usr/local]
   arg[0][0][:output_interval_timeout] = '60min'
   ENV['RUBY_FIBER_VM_STACK_SIZE'] = '32768'
@@ -142,8 +145,6 @@ when 'openbsd-current'
   h[:git_shallow_clone] = true
 when 'freebsd12'
   h[:configure_args_with_opt_dir] = %w[--with-opt-dir=/usr/local]
-  h[:configure_args_disable_dtrace] = %w[--disable-dtrace]
-  h[:configure_args_disable_jit_support] = %w[--disable-jit-support]
 when 'amazon'
   h[:timeout] = '4h'
   h[:output_interval_timeout] = '5min'
@@ -151,9 +152,6 @@ when 'icc-x64'
   ENV["CC"] = "icc -std=gnu99"
   ENV["CXX"] = "icpc -std=gnu++11"
   h[:output_interval_timeout] = '20min'
-when 'centos6'
-  h[:autoconf_command] = 'autoconf268'
-  arg[0].slice!(0,1) # exclude ruby master
 when 'centos7'
   h[:cppflags] ||= []
   # GCC is very old and buggy in CentOS7.  This is needed to disable the false positive warning:
@@ -167,6 +165,7 @@ when /\Aandroid\d+-/
   h[:git_shallow_clone] = true
   # hardlink is not available for a normal user on Android
   def File.link(new, old); end
+  h[:autoreconf_command] = 'autoreconf'
 when /^solaris/ # F
   ENV["MAKE"] = "gmake"
   ENV["RUBY_TEST_TIMEOUT_SCALE"] = "10" if ChkBuild.nickname =~ /sunc$/
@@ -189,24 +188,22 @@ when /^solaris/ # F
       ENV["CC"] = "/usr/gcc/9/bin/gcc"
     end
   end
+when "raspbian10-aarch64"
+  ENV["RUBY_TEST_TIMEOUT_SCALE"] = "3"
 when "debian-riscv64"
   arg[0].slice!(1,9)
-when "osx1013"
+when "osx1013", "osx1015", "osx1100arm"
+  h[:autoreconf_command] = 'autoreconf'
   ENV["PATH"] = "/opt/local/bin:/opt/local/sbin:#{ENV['PATH']}"
   h[:configure_args_with_openssl_dir] = %w[--with-openssl-dir=/opt/local]
-when "osx1014"
-  ENV["PATH"] = "/opt/local/bin:/opt/local/sbin:#{ENV['PATH']}"
-  h[:configure_args_with_openssl_dir] = %w[--with-openssl-dir=/opt/local]
-  h[:cppflags] ||= []
-  h[:cppflags] << "-DRUBY_ASSERT_NOASSUME=1"
-when "osx1100arm"
-  ENV["PATH"] = "/usr/local/bin:/usr/local/sbin:#{ENV['PATH']}"
-  h[:configure_args_with_openssl_dir] = %w[--with-openssl-dir=/Users/hsbt/.rbenv/versions/2.7.2/openssl]
-  h[:configure_args_with_out_ext] = %w[--with-out-ext=+,gdbm]
 end
 
 autoconf_command = '/home/naruse/local/autoconf/bin/autoconf'
 h[:autoconf_command] = autoconf_command if File.exist?(autoconf_command)
+
+autoreconf_command = '/home/naruse/local/autoconf/bin/autoreconf'
+h[:autoreconf_command] = autoreconf_command if File.exist?(autoreconf_command)
+
 h[:configure_args] = ["--with-baseruby=#{RbConfig.ruby}"]
 
 ChkBuild::Ruby.def_target(*arg)

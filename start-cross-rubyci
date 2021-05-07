@@ -1,8 +1,8 @@
 #!/usr/bin/env ruby
 
-# sample/build-cross-ruby - build script for ruby using cross compiler
+# start-build - build start script
 #
-# Copyright (C) 2013 Tanaka Akira  <akr@fsij.org>
+# Copyright (C) 2005-2011 Tanaka Akira  <akr@fsij.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -30,106 +30,19 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# build-crossruby requirements:
-# * toolchain
-#
-# toolchain:
-#   You need a toolchain for cross-compiling.
-#
-#   Toolchain building system:
-#
-#   - buildroot http://buildroot.uclibc.org/
-#     tar xf buildroot-2013.02.tar.bz2
-#     cd buildroot-2013.02
-#     make menuconfig # Your favorite architecture, zlib, openssl, gdbm, libelf, libffi, ncurses, readline, libyaml
-#     make
-#     ln -s $PWD/output/host/usr/bin/<Target-Triplets>-* $HOME/bin
-#
-#   - NetBSD's build.sh
-#     http://www.netbsd.org/docs/guide/en/chap-build.html
-#     arch=sun3         # Your favorite architecture.
-#     d=$HOME/netbsd
-#     cd $d
-#     wget ftp://ftp.netbsd.org/pub/NetBSD/NetBSD-6.1.2/source/sets/{gnusrc,sharesrc,src,syssrc}.tgz
-#     tar xf gnusrc.tgz
-#     tar xf sharesrc.tgz
-#     tar xf src.tgz
-#     tar xf syssrc.tgz
-#     cd usr/src
-#     ./build.sh -O $d/$arch -m $arch -U build > $d/build-$arch.log 2>&1
-#     cross_gcc=`echo $d/$arch/tooldir.*/*-gcc`
-#     triplet=`basename $cross_gcc -gcc`
-#     cat <<End > $HOME/bin/$triplet-gcc
-#     #!/bin/sh
-#     $cross_gcc --sysroot=$d/$arch/destdir.$arch "\$@"
-#     End
-#     chmod 755 $HOME/bin/$triplet-gcc
-#
-#   OS package:
-#
-#   - Debian GNU/Linux (squeeze): gcc-mingw32
-#     aptitude install gcc-mingw32
-#
-#   - Debian GNU/Linux (wheezy): gcc-mingw-w64
-#     aptitude install gcc-mingw-w64
-#
-#   - Emdebian http://www.emdebian.org/ (squeeze)
-#     aptitude install emdebian-archive-keyring
-#     vi /etc/apt/sources.list # add "deb http://www.emdebian.org/debian squeeze main"
-#     aptitude update
-#     aptitude install gcc-4.4-arm-linux-gnueabi zlib1g-dev-armel-cross libgmp3-dev-armel-cross # arm-linux-gnueabi
-#     aptitude install gcc-4.4-ia64-linux-gnu zlib1g-dev-ia64-cross libgmp3-dev-ia64-cross # ia64-linux-gnu
-#     aptitude install gcc-4.4-mips-linux-gnu zlib1g-dev-mips-cross libgmp3-dev-mips-cross # mips-linux-gnu
-#     aptitude install gcc-4.4-mipsel-linux-gnu zlib1g-dev-mipsel-cross libgmp3-dev-mipsel-cross # mipsel-linux-gnu
-#     aptitude install gcc-4.4-powerpc-linux-gnu zlib1g-dev-powerpc-cross libgmp3-dev-powerpc-cross # powerpc-linux-gnu
-#     aptitude install gcc-4.4-s390-linux-gnu zlib1g-dev-s390-cross libgmp3-dev-s390-cross # s390-linux-gnu
-#     aptitude install gcc-4.4-sparc-linux-gnu zlib1g-dev-sparc-cross libgmp3-dev-sparc-cross # sparc-linux-gnu
-#
-#   Platform vendor's toolchain:
-#
-#   - Android NDK http://developer.android.com/tools/sdk/ndk/index.html
-#     (The archive contains docs/STANDALONE-TOOLCHAIN.html.)
-#     tar xf android-ndk-r8e-linux-x86_64.tar.bz2
-#     cd android-ndk-r8e
-#     build/tools/make-standalone-toolchain.sh \
-#       --platform=android-14 \
-#       --toolchain=arm-linux-androideabi-4.6 \
-#       --system=linux-x86_64 \
-#       --install-dir=$HOME/android-arm-toolchain
-#     ln -s $HOME/android-arm-toolchain/bin/* $HOME/bin
-#
-#   Build yourself:
-#
-#   - Cygwin
-#     Cygwin/X Contributor's Guide
-#     Appendix A. Building a cross-compiler
-#     http://x.cygwin.com/docs/cg/cross.html
-#
-#   A cross toolchain contains a cross compiler such as
-#   i686-w64-mingw32-gcc (provided by gcc-mingw-w64).
-#   The prefix, i686-w64-mingw32, is the target system.
-#   You should be sure the command (and other commands which have same prefix)
-#   is available in PATH.
+#ENV['PATH'] = "/usr/local/bin:#{ENV['PATH']}"
+
+$:.unshift File.dirname(File.expand_path(__FILE__))
 
 require 'chkbuild'
 
+ChkBuild.nickname = "crossruby"
+
+ChkBuild.s3_upload_target
+
+# copied from sample/build-crossruby
+
 ENV['LC_ALL'] = 'C'
-
-# resource limits
-#word_bytes = [nil].pack("p").length
-#ChkBuild.limit(:cpu => 3600*4) # seconds
-#ChkBuild.limit(:stack => 1024*1024*10*word_bytes) # bytes
-#ChkBuild.limit(:data => 1024*1024*500*word_bytes) # bytes
-#ChkBuild.limit(:as => 1024*1024*500*word_bytes) # bytes
-
-# ChkBuild.nickname identify chkbuild installation.
-# It is used for title of HTML, etc.
-# The default is the hostname (without domain).
-# ChkBuild.nickname = 'nickname'
-
-# ChkBuild.top_uri is used for RSS.
-# ChkBuild.top_uri = "file://#{ChkBuild.public_top}/"
-# ChkBuild.top_uri = nil # use relative URL
 
 module CrossRuby
   module CompleteOptions
@@ -298,6 +211,7 @@ ChkBuild.define_build_proc('crossruby') {|b|
     configure_args << "--host=#{target_system}"
     configure_args << "--with-baseruby=#{baseruby}"
     configure_args << "--disable-install-doc"
+    configure_args.concat b.opts[:configure_args] if b.opts[:configure_args]
     b.run('./configure', *configure_args)
     show_verconf_h(b)
     b.make
@@ -319,51 +233,44 @@ crossruby_args << [
 ]
 
 crossruby_args << [
-  { :suffix_? => 'mingw', :target => 'i586-mingw32msvc' }, # Debian (squeeze) gcc-mingw32
-  { :suffix_? => 'mingw32', :target => 'i686-w64-mingw32' }, # Debian (wheezy) gcc-mingw-w64
-  { :suffix_? => 'mingw64', :target => 'x86_64-w64-mingw32' }, # Debian (wheezy) gcc-mingw-w64
-  { :suffix_? => 'emdebian-arm', :target => 'arm-linux-gnueabi' }, # Emdebian (squeeze) gcc-4.4-arm-linux-gnueabi
-  { :suffix_? => 'emdebian-ia64', :target => 'ia64-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-ia64-linux-gnu
-  { :suffix_? => 'emdebian-mips', :target => 'mips-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-mips-linux-gnu
-  { :suffix_? => 'emdebian-mipsel', :target => 'mipsel-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-mipsel-linux-gnu
-  { :suffix_? => 'emdebian-powerpc', :target => 'powerpc-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-powerpc-linux-gnu
-  { :suffix_? => 'emdebian-s390', :target => 's390-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-s390-linux-gnu
-  { :suffix_? => 'emdebian-sparc', :target => 'sparc-linux-gnu' }, # Emdebian (squeeze) gcc-4.4-sparc-linux-gnu
-  { :suffix_? => 'aarch64', :target => 'aarch64-linux-gnu' }, # buildroot
-  { :suffix_? => 'amd64', :target => 'x86_64-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'arm', :target => 'arm-buildroot-linux-uclibcgnueabi' }, # buildroot
-  { :suffix_? => 'armeb', :target => 'armeb-buildroot-linux-uclibcgnueabi' }, # buildroot
-  { :suffix_? => 'i386', :target => 'i586-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'mips', :target => 'mips-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'mipsel', :target => 'mipsel-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'powerpc', :target => 'powerpc-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'sh', :target => 'sh4-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'sparc', :target => 'sparc-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'xtensa', :target => 'xtensa-buildroot-linux-uclibc' }, # buildroot
-  { :suffix_? => 'netbsd-alpha', :target => 'alpha--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-arm', :target => 'arm--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-hppa', :target => 'hppa--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-i486', :target => 'i486--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-m68010', :target => 'm68010--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-m68k', :target => 'm68k--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-mipseb', :target => 'mipseb--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-mipsel', :target => 'mipsel--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-powerpc', :target => 'powerpc--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-sh', :target => 'sh--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-shle', :target => 'shle--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-sparc', :target => 'sparc--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-sparc64', :target => 'sparc64--netbsd' }, # NetBSD
-  { :suffix_? => 'netbsd-vax', :target => 'vax--netbsdelf' }, # NetBSD
-  { :suffix_? => 'netbsd-x86_64', :target => 'x86_64--netbsd' }, # NetBSD
-  { :suffix_? => 'android', :target => 'arm-linux-androideabi' }, # Android NDK
-  { :suffix_? => 'x86android', :target => 'i686-linux-android' }, # Android NDK
-  { :suffix_? => 'mipsandroid', :target => 'mipsel-linux-android' }, # Android NDK
-  { :suffix_? => 'cygwin', :target => 'i686-pc-cygwin' }, # Cygwin
+  { :suffix_? => 'mingw32', :target => 'i686-w64-mingw32' },
+  { :suffix_? => 'mingw64', :target => 'x86_64-w64-mingw32' },
+  { :suffix_? => 'arm', :target => 'arm-linux-gnueabi' },
+  { :suffix_? => 'mips', :target => 'mips-linux-gnu' },
+  { :suffix_? => 'mipsel', :target => 'mipsel-linux-gnu' },
+  { :suffix_? => 'powerpc', :target => 'powerpc-linux-gnu' },
+  { :suffix_? => 's390', :target => 's390-linux-gnu' },
+  { :suffix_? => 'sparc', :target => 'sparc64-linux-gnu' },
+  { :suffix_? => 'aarch64', :target => 'aarch64-linux-gnu' },
+  #{ :suffix_? => 'sh4', :target => 'sh4-linux-gnu' }, # looks like sh4-gcc is broken: http://rubyci.s3.amazonaws.com/crossruby/crossruby-master-sh4/log/20210409T051310Z.fail.html.gz
+  { :suffix_? => 'hppa', :target => 'hppa-linux-gnu' },
+  { :suffix_? => 'm68k', :target => 'm68k-linux-gnu' },
+  # TODO: android?
+  # TODO: emscripten
 ].reject {|h| !Util.search_command("#{h[:target]}-gcc") }
+
+crossruby_args[-1].concat([
+  { :suffix_? => 'aarch64-android30', :target => 'aarch64-linux-android' },
+  { :suffix_? => 'armv7a-android30', :target => 'armv7a-linux-androideabi' },
+  { :suffix_? => 'i686-android30', :target => 'i686-linux-android' },
+  { :suffix_? => 'x86_64-android30', :target => 'x86_64-linux-android' },
+].map do |h|
+  clang = "#{h[:target]}30-clang"
+  if Util.search_command(clang)
+    configure_args = ["CC=" + clang]
+    clangxx = "#{ clang }++"
+    configure_args << ("CXX=" + clangxx) if Util.search_command(clangxx)
+    h[:configure_args] = configure_args
+    h
+  else
+    nil
+  end
+end.compact)
 
 crossruby_args << {
   :timeout => '1h',
   :output_interval_timeout => '5min',
+  :git_shallow_clone => true,
 }
 
 crossruby_args << nativeruby if nativeruby
